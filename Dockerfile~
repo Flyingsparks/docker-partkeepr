@@ -12,24 +12,20 @@ CMD ["/sbin/my_init"]
 # expose HTTP port
 EXPOSE 80
 
-# Add repository for PHP5.6
-sudo add-apt-repository ppa:ondrej/php5-5.6
-
 # Update apt cache & install software
 RUN apt-get update && apt-get install -y \
-   	mysql-server \
-	nginx \
-	php5
-	php5-fpm \
-	php5-common \
-	php-pear \
-	php-apc \
-	php5-mysql \
-	php5-imagick \
-	php5-curl \
-	php5-cli \
-	php5-gd \
-	php5-json \
+    mysql-server \
+    nginx \
+    php5-fpm \
+    php5-common \
+    php-pear \
+    php-apc \
+    php5-mysql \
+    php5-imagick \
+    php5-curl \
+    php5-cli \
+    php5-gd \
+    php5-json \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # nginx configuration
