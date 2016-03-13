@@ -1,5 +1,5 @@
 # start from phusion/baseimage
-FROM phusion/baseimage
+FROM alpine
 MAINTAINER  Stefan Raabe
 
 # Set correct environment variables.
@@ -12,21 +12,32 @@ CMD ["/sbin/my_init"]
 # expose HTTP port
 EXPOSE 80
 
+# Update apt cache & install software#
+#RUN apt-get update && apt-get install -y \
+#	python-software-properties \
+# && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Add repository for PHP5.6
+#RUN add-apt-repository ppa:ondrej/php5-5.6
+
 # Update apt cache & install software
-RUN apt-get update && apt-get install -y \
-    mysql-server \
-    nginx \
-    php5-fpm \
-    php5-common \
-    php-pear \
-    php-apc \
-    php5-mysql \
-    php5-imagick \
-    php5-curl \
-    php5-cli \
-    php5-gd \
-    php5-json \
- && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#RUN apt-get update && apt-get install -y \
+RUN apk add --update \
+   	mysql-server \
+	nginx \
+#	php5 \
+	php5-fpm \
+	php5-common \
+	php-pear \
+	php-apc \
+	php5-mysql \
+	php5-imagick \
+	php5-curl \
+	php5-cli \
+	php5-gd \
+	php5-json \
+ && rm -rf /var/cache/apk/*
+# && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # nginx configuration
 RUN mkdir /srv/www && ln -s /srv/www /var/www
@@ -51,7 +62,7 @@ RUN pear install twig/Twig
 
 # download partkeepr
 RUN cd /srv/www && \
-    curl http://partkeepr.org/downloads/partkeepr-0.1.9.tbz2 |tar xj && \
+    curl https://downloads.partkeepr.org/partkeepr-0.1.9.tbz2 |tar xj && \
     mv partkeepr-0.1.9 partkeepr
 
 # config partkeepr
