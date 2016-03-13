@@ -1,6 +1,6 @@
 # start from phusion/baseimage
-FROM phusion/baseimage:0.9.8
-MAINTAINER  Markus Hubig <mhubig@imko.de>
+FROM debian:jessie
+MAINTAINER  Stefan Raabe
 
 # Set correct environment variables.
 ENV HOME /root
@@ -12,79 +12,37 @@ CMD ["/sbin/my_init"]
 # expose HTTP port
 EXPOSE 80
 
+# DotDeb.org (extra repo with up-to-date packages)
+RUN echo 'deb http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list \
+ && echo 'deb-src http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list
+
+RUN gpg --keyserver keys.gnupg.net --recv-key 89DF5277 \
+	&& gpg -a --export 89DF5277 | apt-key add -
+
 # Update apt cache & install software
-RUN apt-get update && apt-get install -y \
-    mysql-server \
-    nginx \
-    php5-fpm \
-    php5-common \
-    php-pear \
-    php-apc \
-    php5-mysql \
-    php5-imagick \
-    php5-curl \
-    php5-cli \
-    php5-gd \
-    php5-json
+RUN apt-get update && apt-get upgrade && apt-get install -y \
+	apache2 \
+	apache2-doc \    
+	curl \
+	mysql-server \
+	mysql-client \
+	ntp \
+	php7.0 \
+	php7.0-apcu \
+	php7.0-curl \
+	php7.0-gd \
+	php7.0-intl \
+	php7.0-ldap \
+	php7.0-mysql \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# nginx configuration
-RUN mkdir /srv/www && ln -s /srv/www /var/www
-ADD nginx/nginx.conf /etc/nginx/nginx.conf
-ADD nginx/default /etc/nginx/sites-available/default
+# Download PartKeepr
+RUN cd /var/www \
+	&& curl -O https://downloads.partkeepr.org/partkeepr-0.82.tbz2
 
-# mysql configuration
-ADD mysql/my.cnf /etc/mysql/my.cnf
+# Modify PartKeepr directory and file permissions
+#RUN chown -R $(whoami):www-data /var/www/partkeepr
+#RUN find /var/www/partkeepr -type d -exec chmod 770 {} +
+#RUN find /var/www/partkeepr -type f -exec chmod 660 {} +
 
-# PHP5 & PHP-FPM configuration
-ADD php-fpm/php-fpm.conf /etc/php5/fpm/php-fpm.conf
-ADD php-fpm/fpm-www.conf /etc/php5/fpm/pool.d/www.conf
-ADD php-fpm/php.ini /etc/php5/fpm/php.ini
 
-RUN pear channel-discover pear.symfony.com
-RUN pear channel-discover pear.doctrine-project.org
-RUN pear channel-discover pear.twig-project.org
-RUN pear install pear.doctrine-project.org/DoctrineORM
-RUN pear install pear.doctrine-project.org/DoctrineSymfonyYaml
-RUN pear install pear.doctrine-project.org/DoctrineSymfonyConsole
-RUN pear install twig/Twig
-
-# download partkeepr
-RUN cd /srv/www && \
-    curl http://partkeepr.org/downloads/partkeepr-0.1.9.tbz2 |tar xj && \
-    mv partkeepr-0.1.9 partkeepr
-
-# config partkeepr
-ADD partkeepr/config.php /srv/www/partkeepr/config.php
-ADD partkeepr/config.sql /srv/www/partkeepr/config.sql
-ADD partkeepr/SetupDatabase.php /srv/www/partkeepr/testing/SetupDatabase.php
-ADD partkeepr/cronjobs /etc/cron.d/partkeepr
-
-# fix permissions
-RUN chown -R root:root /srv/www/partkeepr && \
-    chown -R www-data:www-data /srv/www/partkeepr/data
-
-# setup mysql db
-RUN /usr/sbin/mysqld & sleep 10s && \
-    cd /srv/www/partkeepr && \
-    mysql < config.sql
-RUN /usr/sbin/mysqld & sleep 10s &&  \
-    cd /srv/www/partkeepr/testing && \
-    php SetupDatabase.php --yes
-
-# register the nginx service
-RUN mkdir /etc/service/nginx
-ADD nginx/nginx.sh /etc/service/nginx/run
-
-# register the php-fpm service
-RUN mkdir /etc/service/php-fpm
-ADD php-fpm/php-fpm.sh /etc/service/php-fpm/run
-
-# Register the MySQL service
-RUN mkdir /etc/service/mysql
-ADD mysql/mysql.sh /etc/service/mysql/run
-
-# unregister the SSH service
-RUN rm -rf /etc/service/sshd
-
-# Clean up APT when done.
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
